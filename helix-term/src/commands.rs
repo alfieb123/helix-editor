@@ -311,6 +311,8 @@ impl MappableCommand {
         append_mode, "Append after selection",
         command_mode, "Enter command mode",
         file_picker, "Open file picker",
+        file_picker_in_current_directory_ignore_h, "Open file picker in current directory ignoring .h files",
+        file_picker_in_current_directory_ignore_cpp, "Open file picker in current directory ignoring .cpp files",
         file_picker_in_current_buffer_directory, "Open file picker at current buffers's directory",
         file_picker_in_current_directory, "Open file picker at current working directory",
         code_action, "Perform code action",
@@ -2710,6 +2712,28 @@ fn file_picker(cx: &mut Context) {
         return;
     }
     let picker = ui::file_picker(root, &cx.editor.config());
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+fn file_picker_in_current_directory_ignore_h(cx: &mut Context) {
+    let cwd = helix_stdx::env::current_working_dir();
+    if !cwd.exists() {
+        cx.editor
+            .set_error("Current working directory does not exist");
+        return;
+    }
+    let picker = ui::file_picker_no_dot_h(cwd, &cx.editor.config());
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+fn file_picker_in_current_directory_ignore_cpp(cx: &mut Context) {
+    let cwd = helix_stdx::env::current_working_dir();
+    if !cwd.exists() {
+        cx.editor
+            .set_error("Current working directory does not exist");
+        return;
+    }
+    let picker = ui::file_picker_no_dot_cpp(cwd, &cx.editor.config());
     cx.push_layer(Box::new(overlaid(picker)));
 }
 

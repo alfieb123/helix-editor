@@ -26,6 +26,21 @@ pub fn categorize_char(ch: char) -> CharCategory {
     }
 }
 
+#[inline]
+pub fn categorize_char_with_unds_not_word(ch: char) -> CharCategory {
+    if char_is_line_ending(ch) {
+        CharCategory::Eol
+    } else if ch.is_whitespace() {
+        CharCategory::Whitespace
+    } else if char_is_word_underscore_excluded(ch) {
+        CharCategory::Word
+    } else if char_is_punctuation(ch) {
+        CharCategory::Punctuation
+    } else {
+        CharCategory::Unknown
+    }
+}
+
 /// Determine whether a character is a line ending.
 #[inline]
 pub fn char_is_line_ending(ch: char) -> bool {
@@ -82,7 +97,11 @@ pub fn char_is_punctuation(ch: char) -> bool {
 
 #[inline]
 pub fn char_is_word(ch: char) -> bool {
-    // ch.is_alphanumeric() || ch == '_'
+    ch.is_alphanumeric() || ch == '_'
+}
+
+#[inline]
+pub fn char_is_word_underscore_excluded(ch: char) -> bool {
     ch.is_alphanumeric()
 }
 

@@ -50,6 +50,50 @@ fn find_word_boundary(slice: RopeSlice, mut pos: usize, direction: Direction, lo
     pos
 }
 
+fn find_word_boundary_unds_not_word(
+    slice: RopeSlice,
+    mut pos: usize,
+    direction: Direction,
+    long: bool,
+) -> usize {
+    use CharCategory::{Eol, Whitespace};
+
+    let iter = match direction {
+        Direction::Forward => slice.chars_at(pos),
+        Direction::Backward => {
+            let mut iter = slice.chars_at(pos);
+            iter.reverse();
+            iter
+        }
+    };
+
+    let mut prev_category = match direction {
+        Direction::Forward if pos == 0 => Whitespace,
+        Direction::Forward => categorize_char(slice.char(pos - 1)),
+        Direction::Backward if pos == slice.len_chars() => Whitespace,
+        Direction::Backward => categorize_char(slice.char(pos)),
+    };
+
+    for ch in iter {
+        match categorize_char(ch) {
+            Eol | Whitespace => return pos,
+            category => {
+                if !long && category != prev_category && pos != 0 && pos != slice.len_chars() {
+                    return pos;
+                } else {
+                    match direction {
+                        Direction::Forward => pos += 1,
+                        Direction::Backward => pos = pos.saturating_sub(1),
+                    }
+                    prev_category = category;
+                }
+            }
+        }
+    }
+
+    pos
+}
+
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum TextObject {
     Around,
@@ -82,6 +126,49 @@ pub fn textobject_word(
     let word_end = match slice.get_char(pos).map(categorize_char) {
         None | Some(CharCategory::Whitespace | CharCategory::Eol) => pos,
         _ => find_word_boundary(slice, pos + 1, Direction::Forward, long),
+    };
+
+    // Special case.
+    if word_start == word_end {
+        return Range::new(word_start, word_end);
+    }
+
+    match textobject {
+        TextObject::Inside => Range::new(word_start, word_end),
+        TextObject::Around => {
+            let whitespace_count_right = slice
+                .chars_at(word_end)
+                .take_while(|c| char_is_whitespace(*c))
+                .count();
+
+            if whitespace_count_right > 0 {
+                Range::new(word_start, word_end + whitespace_count_right)
+            } else {
+                let whitespace_count_left = {
+                    let mut iter = slice.chars_at(word_start);
+                    iter.reverse();
+                    iter.take_while(|c| char_is_whitespace(*c)).count()
+                };
+                Range::new(word_start - whitespace_count_left, word_end)
+            }
+        }
+        TextObject::Movement => unreachable!(),
+    }
+}
+
+pub fn textobject_word_no_unds(
+    slice: RopeSlice,
+    range: Range,
+    textobject: TextObject,
+    _count: usize,
+    long: bool,
+) -> Range {
+    let pos = range.cursor(slice);
+
+    let word_start = find_word_boundary_unds_not_word(slice, pos, Direction::Backward, long);
+    let word_end = match slice.get_char(pos).map(categorize_char) {
+        None | Some(CharCategory::Whitespace | CharCategory::Eol) => pos,
+        _ => find_word_boundary_unds_not_word(slice, pos + 1, Direction::Forward, long),
     };
 
     // Special case.
