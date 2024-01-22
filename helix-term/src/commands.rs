@@ -10,7 +10,9 @@ use tui::widgets::Row;
 pub use typed::*;
 
 use helix_core::{
-    char_idx_at_visual_offset, comment,
+    char_idx_at_visual_offset,
+    chars::change_underscore_is_not_word_value,
+    comment,
     doc_formatter::TextFormat,
     encoding, find_first_non_whitespace_char, find_workspace, graphemes,
     history::UndoKind,
@@ -244,7 +246,9 @@ impl MappableCommand {
         copy_selection_on_next_line, "Copy selection on next line",
         copy_selection_on_prev_line, "Copy selection on previous line",
         move_next_word_start, "Move to start of next word",
+        move_next_word_start_underscore_tolerant, "Move to start of next word, where underscores are not classed as words",
         move_prev_word_start, "Move to start of previous word",
+        move_prev_word_start_underscore_tolerant, "Move to start of previous word, where underscores are not classed as words",
         move_next_word_end, "Move to end of next word",
         move_prev_word_end, "Move to end of previous word",
         move_next_long_word_start, "Move to start of next long word",
@@ -1064,8 +1068,20 @@ fn move_next_word_start(cx: &mut Context) {
     move_word_impl(cx, movement::move_next_word_start)
 }
 
+fn move_next_word_start_underscore_tolerant(cx: &mut Context) {
+    change_underscore_is_not_word_value(true);
+    move_word_impl(cx, movement::move_next_word_start);
+    change_underscore_is_not_word_value(false);
+}
+
 fn move_prev_word_start(cx: &mut Context) {
     move_word_impl(cx, movement::move_prev_word_start)
+}
+
+fn move_prev_word_start_underscore_tolerant(cx: &mut Context) {
+    change_underscore_is_not_word_value(true);
+    move_word_impl(cx, movement::move_prev_word_start);
+    change_underscore_is_not_word_value(false);
 }
 
 fn move_prev_word_end(cx: &mut Context) {

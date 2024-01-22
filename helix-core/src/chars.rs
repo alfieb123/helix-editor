@@ -1,6 +1,15 @@
 //! Utility functions to categorize a `char`.
 
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use crate::LineEnding;
+
+static UNDERSCORE_IS_NOT_WORD: AtomicBool = AtomicBool::new(false);
+
+#[inline]
+pub fn change_underscore_is_not_word_value(value: bool) {
+    UNDERSCORE_IS_NOT_WORD.store(value, Ordering::SeqCst);
+}
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum CharCategory {
@@ -18,21 +27,6 @@ pub fn categorize_char(ch: char) -> CharCategory {
     } else if ch.is_whitespace() {
         CharCategory::Whitespace
     } else if char_is_word(ch) {
-        CharCategory::Word
-    } else if char_is_punctuation(ch) {
-        CharCategory::Punctuation
-    } else {
-        CharCategory::Unknown
-    }
-}
-
-#[inline]
-pub fn categorize_char_with_unds_not_word(ch: char) -> CharCategory {
-    if char_is_line_ending(ch) {
-        CharCategory::Eol
-    } else if ch.is_whitespace() {
-        CharCategory::Whitespace
-    } else if char_is_word_underscore_excluded(ch) {
         CharCategory::Word
     } else if char_is_punctuation(ch) {
         CharCategory::Punctuation
@@ -97,12 +91,11 @@ pub fn char_is_punctuation(ch: char) -> bool {
 
 #[inline]
 pub fn char_is_word(ch: char) -> bool {
-    ch.is_alphanumeric() || ch == '_'
-}
-
-#[inline]
-pub fn char_is_word_underscore_excluded(ch: char) -> bool {
-    ch.is_alphanumeric()
+    if UNDERSCORE_IS_NOT_WORD.load(Ordering::SeqCst) {
+        ch.is_alphanumeric()
+    } else {
+        ch.is_alphanumeric() || ch == '_'
+    }
 }
 
 #[cfg(test)]
