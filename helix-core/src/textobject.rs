@@ -3,7 +3,9 @@ use std::fmt::Display;
 use ropey::RopeSlice;
 use tree_sitter::{Node, QueryCursor};
 
-use crate::chars::{categorize_char, char_is_whitespace, CharCategory};
+use crate::chars::{
+    categorize_char, change_underscore_is_not_word_value, char_is_whitespace, CharCategory,
+};
 use crate::graphemes::{next_grapheme_boundary, prev_grapheme_boundary};
 use crate::line_ending::rope_is_line_ending;
 use crate::movement::Direction;
@@ -127,6 +129,54 @@ pub fn textobject_word(
         None | Some(CharCategory::Whitespace | CharCategory::Eol) => pos,
         _ => find_word_boundary(slice, pos + 1, Direction::Forward, long),
     };
+
+    // Special case.
+    if word_start == word_end {
+        return Range::new(word_start, word_end);
+    }
+
+    match textobject {
+        TextObject::Inside => Range::new(word_start, word_end),
+        TextObject::Around => {
+            let whitespace_count_right = slice
+                .chars_at(word_end)
+                .take_while(|c| char_is_whitespace(*c))
+                .count();
+
+            if whitespace_count_right > 0 {
+                Range::new(word_start, word_end + whitespace_count_right)
+            } else {
+                let whitespace_count_left = {
+                    let mut iter = slice.chars_at(word_start);
+                    iter.reverse();
+                    iter.take_while(|c| char_is_whitespace(*c)).count()
+                };
+                Range::new(word_start - whitespace_count_left, word_end)
+            }
+        }
+        TextObject::Movement => unreachable!(),
+    }
+}
+
+pub fn textobject_word_underscore_tolerant(
+    slice: RopeSlice,
+    range: Range,
+    textobject: TextObject,
+    _count: usize,
+    long: bool,
+) -> Range {
+    let pos = range.cursor(slice);
+
+    // it is within the find_word_boundary function that we check underscores,
+    // so we turn it off and on bookending that
+    change_underscore_is_not_word_value(true);
+    let word_start = find_word_boundary(slice, pos, Direction::Backward, long);
+    let word_end = match slice.get_char(pos).map(categorize_char) {
+        None | Some(CharCategory::Whitespace | CharCategory::Eol) => pos,
+        _ => find_word_boundary(slice, pos + 1, Direction::Forward, long),
+    };
+    // turn it off
+    change_underscore_is_not_word_value(false);
 
     // Special case.
     if word_start == word_end {
