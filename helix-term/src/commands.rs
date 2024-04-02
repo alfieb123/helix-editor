@@ -449,6 +449,8 @@ impl MappableCommand {
         wclose, "Close window",
         wonly, "Close windows except current",
         select_register, "Select register",
+        select_path_register, "Select path register",
+        insert_path_register, "Insert path register",
         insert_register, "Insert register",
         align_view_middle, "Align view middle",
         align_view_top, "Align view top",
@@ -5077,6 +5079,24 @@ fn select_register(cx: &mut Context) {
             cx.editor.selected_register = Some(ch);
         }
     })
+}
+
+fn select_path_register(cx: &mut Context) {
+    cx.editor.autoinfo = None;
+    cx.editor.selected_register = Some('%');
+}
+
+fn insert_path_register(cx: &mut Context) {
+    cx.editor.autoinfo = None;
+    cx.register = Some('%');
+    paste(
+        cx.editor,
+        cx.register.unwrap_or('"'),
+        Paste::Cursor,
+        cx.count(),
+    );
+    cx.editor.autoinfo = None;
+    cx.register = Some('"');
 }
 
 fn insert_register(cx: &mut Context) {

@@ -2496,8 +2496,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "buffer-close",
         aliases: &["bc", "bclose"],
-        doc: "Close the current buffer.",
-        fun: buffer_close,
+        doc: "Close the current buffer.", fun: buffer_close,
         signature: CommandSignature::all(completers::buffer),
     },
     TypableCommand {
