@@ -323,6 +323,8 @@ impl MappableCommand {
         append_mode, "Append after selection",
         command_mode, "Enter command mode",
         file_picker, "Open file picker",
+        file_picker_in_current_directory_ignore_h, "Open file picker in current directory ignoring .h files",
+        file_picker_in_current_directory_ignore_cpp, "Open file picker in current directory ignoring .cpp files",
         file_picker_in_current_buffer_directory, "Open file picker at current buffers's directory",
         file_picker_in_current_directory, "Open file picker at current working directory",
         code_action, "Perform code action",
@@ -458,6 +460,8 @@ impl MappableCommand {
         wclose, "Close window",
         wonly, "Close windows except current",
         select_register, "Select register",
+        select_path_register, "Select path register",
+        insert_path_register, "Insert path register",
         insert_register, "Insert register",
         align_view_middle, "Align view middle",
         align_view_top, "Align view top",
@@ -2814,6 +2818,28 @@ fn file_picker(cx: &mut Context) {
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
+fn file_picker_in_current_directory_ignore_h(cx: &mut Context) {
+    let cwd = helix_stdx::env::current_working_dir();
+    if !cwd.exists() {
+        cx.editor
+            .set_error("Current working directory does not exist");
+        return;
+    }
+    let picker = ui::file_picker_no_dot_h(cwd, &cx.editor.config());
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+fn file_picker_in_current_directory_ignore_cpp(cx: &mut Context) {
+    let cwd = helix_stdx::env::current_working_dir();
+    if !cwd.exists() {
+        cx.editor
+            .set_error("Current working directory does not exist");
+        return;
+    }
+    let picker = ui::file_picker_no_dot_cpp(cwd, &cx.editor.config());
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
 fn file_picker_in_current_buffer_directory(cx: &mut Context) {
     let doc_dir = doc!(cx.editor)
         .path()
@@ -5139,6 +5165,24 @@ fn insert_register(cx: &mut Context) {
             );
         }
     })
+}
+
+fn select_path_register(cx: &mut Context) {
+    cx.editor.autoinfo = None;
+    cx.editor.selected_register = Some('%');
+}
+
+fn insert_path_register(cx: &mut Context) {
+    cx.editor.autoinfo = None;
+    cx.register = Some('%');
+    paste(
+        cx.editor,
+        cx.register.unwrap_or('"'),
+        Paste::Cursor,
+        cx.count(),
+    );
+    cx.editor.autoinfo = None;
+    cx.register = Some('"');
 }
 
 fn align_view_top(cx: &mut Context) {
